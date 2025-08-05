@@ -1,9 +1,0 @@
-#upload-form button {
-  border-radius: 8px;
-  border: 1px solid crimson;
-  padding: .2em .5em;
-}
-.tab-btn.active {
-  background-color: #3b82f6;
-  color: white;
-}
