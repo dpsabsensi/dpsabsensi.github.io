@@ -1,5 +1,4 @@
 // config.js
-
 export const JAM_KERJA_MULAI = '08:00';
 export const JAM_KERJA_SELESAI = '16:00';
 export const JAM_KERJA_SELESAI_SABTU = '14:00';

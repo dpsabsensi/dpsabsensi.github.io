@@ -1,3 +1,4 @@
+// app.js
 document.getElementById('upload-form').addEventListener('submit', async function (e) {
   e.preventDefault();
 
@@ -17,7 +18,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
     // Ambil respons sebagai teks mentah terlebih dahulu
     const rawText = await uploadRes.text();
-    console.log("Raw response dari upload.php:", rawText);
+    // console.log("Raw response dari upload.php:", rawText);
     
     // Coba parse ke JSON
     let uploadResult;
@@ -29,10 +30,10 @@ document.getElementById('upload-form').addEventListener('submit', async function
       return;
     }
 
-    if (!uploadResult.success) {
-      messageEl.innerText = '❌ Upload gagal: ' + uploadResult.message;
-      return;
-    }
+    // if (!uploadResult.success) {
+    //   messageEl.innerText = '❌ Upload gagal: ' + uploadResult.message;
+    //   return;
+    // }
     
     // Jika upload berhasil, lanjutkan proses parse
     const filename = uploadResult.filename;
@@ -57,13 +58,13 @@ document.getElementById('upload-form').addEventListener('submit', async function
       return;
     }
 
-    if (!parseResult.success) {
-      messageEl.innerText = '⚠️ Parsing gagal: ' + parseResult.message;
-      return;
-    }
+    // if (!parseResult.success) {
+    //   messageEl.innerText = '⚠️ Parsing gagal: ' + parseResult.message;
+    //   return;
+    // }
 
     messageEl.innerText = '✅ Sukses! Data berhasil diparse';
-    console.log("Parsed data:", parseResult.data);
+    // console.log("Parsed data:", parseResult.data);
   } catch (error) {
     messageEl.innerText = '❌ Terjadi kesalahan: ' + error.message;
   }

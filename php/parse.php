@@ -1,14 +1,16 @@
 <?php
 // parse.php
-include_once __DIR__ . "/lib.php";
+include_once __DIR__ . '/lib.php';
+include_once __DIR__ . "/indexer.php";
+
 
 ini_set("display_errors", 1);
 ini_set("display_startup_errors", 1);
 error_reporting(E_ALL);
 
 $tahun = date("Y");
-$uploadDir = __DIR__ . "/../data/uploads/$tahun/";
-$jsonDir = __DIR__ . "/../data/json/$tahun/";
+$uploadDir = __DIR__ . "/../public/data/uploads/$tahun/";
+$jsonDir = __DIR__ . "/../public/data/json/$tahun/";
 
 function getNamaBulan($angka) {
     $bulanMap = [
@@ -58,7 +60,55 @@ if ($handle !== false) {
         }
 
         [$date, $time] = explode(" ", $datetime);
-        $type = (!isset($userLogs[$id]["logs"][$date]) || count($userLogs[$id]["logs"][$date]) % 2 == 0) ? "in" : "out";
+
+        // Deteksi apakah hari Sabtu
+        $dateTimeObj = DateTime::createFromFormat("m/d/Y", $date);
+        $isSaturday = $dateTimeObj && $dateTimeObj->format("N") == 6; // 6 = Sabtu
+
+        // Konversi ke timestamp jam-menit
+        $timeOnly = DateTime::createFromFormat("H:i", $time);
+        $hour = (int)$timeOnly->format("H");
+        $minute = (int)$timeOnly->format("i");
+        $minutesSinceMidnight = $hour * 60 + $minute;
+
+        // Tentukan tipe berdasarkan waktu
+        if ($minutesSinceMidnight >= 420 && $minutesSinceMidnight <= 600) { // 07:00 - 10:00
+            $type = "in";
+        } elseif ($minutesSinceMidnight >= 690 && $minutesSinceMidnight <= 780) { // 11:30 - 13:00
+            $logsForDate = $userLogs[$id]["logs"][$date] ?? [];
+            $prev = end($logsForDate);
+            if ($prev && isset($prev["type"]) && $prev["type"] === "break-in") {
+                $type = "break-out";
+            } else {
+                $type = "break-in";
+            }
+        } elseif (
+            (!$isSaturday && $minutesSinceMidnight >= 960) ||  // >= 16:00
+            ($isSaturday && $minutesSinceMidnight >= 840)      // >= 14:00
+        ) {
+            $type = "out";
+        } else {
+            continue;
+        }
+
+        // // Tentukan tipe berdasarkan waktu
+        // if ($minutesSinceMidnight >= 420 && $minutesSinceMidnight <= 600) { // 07:00 - 10:00
+        //     $type = "in";
+        // } elseif ($minutesSinceMidnight >= 690 && $minutesSinceMidnight <= 780) { // 11:30 - 13:00
+        //     // break-in atau break-out tergantung entry sebelumnya
+        //     $logsForDate = $userLogs[$id]["logs"][$date] ?? [];
+        //     $prev = end($logsForDate);
+        //     if ($prev && isset($prev["type"]) && $prev["type"] === "break-in") {
+        //         $type = "break-out";
+        //     } else {
+        //         $type = "break-in";
+        //     }
+        // } elseif ($minutesSinceMidnight >= 960 && $minutesSinceMidnight <= 1439) { // 16:00 - 23:59
+        //     $type = "out";
+        // } else {
+        //     // Diluar rentang, abaikan saja
+        //     continue;
+        // }
 
         if (!isset($userLogs[$id])) {
             $userLogs[$id] = [
@@ -92,8 +142,7 @@ if ($handle !== false) {
 if ($firstDatetime) {
     [$tgl,] = explode(" ", $firstDatetime);
     [$bulanAngka, , $tahun] = explode("/", $tgl);
-    $namaBulan = getNamaBulan($bulanAngka);
-    $outputFileName = strtolower($namaBulan . $tahun) . ".json";
+    $outputFileName = "{$tahun}-{$bulanAngka}.json";
 } else {
     $outputFileName = pathinfo($filename, PATHINFO_FILENAME) . ".json"; // fallback
 }
@@ -111,10 +160,11 @@ file_put_contents($outputFile, json_encode(array_values($userLogs), JSON_PRETTY_
 echo json_encode([
     "success" => true,
     "message" => "Parsing selesai.",
-    "output" => "data/json/$tahun/$outputFileName",
+    "output" => "/public/data/json/$tahun/$outputFileName",
     "data" => $userLogs
 ]);
 
 ob_end_flush();
 file_put_contents(__DIR__ . "/../log/log_parse_debug_last.txt", ob_get_contents());
+generate_json_index();
 ?>

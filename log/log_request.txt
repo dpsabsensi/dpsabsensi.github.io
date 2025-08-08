@@ -1,0 +1,40 @@
+Array
+(
+    [method] => POST
+    [headers] => Array
+        (
+            [Host] => localhost
+            [User-Agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0
+            [Accept] => */*
+            [Accept-Language] => en-US,en;q=0.5
+            [Accept-Encoding] => gzip, deflate, br, zstd
+            [Referer] => http://localhost/
+            [Content-Type] => multipart/form-data; boundary=----geckoformboundary331e684a90bdd5a395ff5641adcc3dd0
+            [Content-Length] => 115117
+            [Origin] => http://localhost
+            [Connection] => keep-alive
+            [Sec-Fetch-Dest] => empty
+            [Sec-Fetch-Mode] => cors
+            [Sec-Fetch-Site] => same-origin
+            [Priority] => u=0
+        )
+
+    [files] => Array
+        (
+            [csvFile] => Array
+                (
+                    [name] => TransactionsReportjul.csv
+                    [full_path] => TransactionsReportjul.csv
+                    [type] => application/vnd.ms-excel
+                    [tmp_name] => C:\Users\User\AppData\Local\Temp\php8ABD.tmp
+                    [error] => 0
+                    [size] => 114871
+                )
+
+        )
+
+    [post] => Array
+        (
+        )
+
+)

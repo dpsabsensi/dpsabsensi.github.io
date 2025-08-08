@@ -2,6 +2,7 @@
 
 // Mengubah waktu format "HH:MM" menjadi total menit
 export function parseTime(str) {
+  if (!str || typeof str !== 'string') return null;
   const [h, m] = str.split(':').map(Number);
   return h * 60 + m;
 }
@@ -13,15 +14,10 @@ export function formatJamMenit(menit) {
   return `${jam}j ${sisa}m`;
 }
 
-// Mengambil nama hari dari string tanggal "YYYY-MM-DD"
-export function getDayName(tanggal) {
-  const date = new Date(tanggal);
-  return date.toLocaleDateString('id-ID', { weekday: 'long' });
-}
-
-// Mengecek apakah tanggal tersebut hari Sabtu
 export function isSabtu(tanggal) {
-  return getDayName(tanggal).toLowerCase() === 'sabtu';
+  const [year, month, day] = tanggal.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getDay() === 6; // 6 = Sabtu
 }
 
 // Fungsi untuk menghitung denda keterlambatan

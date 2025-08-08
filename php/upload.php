@@ -43,7 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Simpan ke folder sementara
-    $uploadTempFolder = realpath(__DIR__ . "/../data/temp/") . '/';
+    $uploadTempFolder = realpath(__DIR__ . "/../public/data/temp/") . '/';
     ensure_dir($uploadTempFolder);
 
     $originalName = basename($_FILES["csvFile"]["name"]);
@@ -75,7 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $tahun = $matches[2] ?? date("Y");
 
     // Simpan ke folder berdasarkan tahun
-    $uploadFolder = __DIR__ . "/../data/uploads/$tahun/";
+    $uploadFolder = __DIR__ . "/../public/data/uploads/$tahun/";
     ensure_dir($uploadFolder);
 
     $fileNameCSV = "absensi_" . date("Y-m-d_His") . ".csv";
@@ -135,3 +135,4 @@ if (trim($extraOutput) !== "") {
 // Pastikan browser tetap terima JSON
 header("Content-Type: application/json");
 echo json_encode($response);
+?>

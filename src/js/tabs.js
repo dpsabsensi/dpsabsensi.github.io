@@ -1,3 +1,4 @@
+// tabs.js
 export function setupTabSwitching({ summaryId, detailId, tabSummaryId, tabDetailId }) {
   const tabSummary = document.getElementById(tabSummaryId);
   const tabDetail = document.getElementById(tabDetailId);

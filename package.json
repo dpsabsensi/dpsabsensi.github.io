@@ -10,16 +10,13 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
-    "jest": "^30.0.5",
     "postcss": "^8.5.6",
+    "postcss-nested": "^7.0.2",
     "tailwindcss": "^3.4.17",
     "vite": "^7.0.6"
   },
-  "dependencies": {
-    "nvm": "^0.0.4"
-  },
   "description": "",
-  "main": "postcss.config.js",
+  "main": "postcss.config.mjs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dpsabsensi/dpsabsensi.github.io.git"
