@@ -3,6 +3,7 @@
 import '/src/css/input.css';
 import '/src/css/style.css';
 import './config.js';
+import './app.js';
 import './utils.js';
 import './holiday.js';
 import './workdays.js';
