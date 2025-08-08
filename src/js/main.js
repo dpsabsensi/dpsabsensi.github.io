@@ -1,7 +1,7 @@
 // main.js
 /** @type {import('tailwindcss').Config} */
-import '../css/input.css';
-import '../css/style.css';
+import '/src/css/input.css';
+import '/src/css/style.css';
 import './config.js';
 import './utils.js';
 import './holiday.js';
