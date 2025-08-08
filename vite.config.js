@@ -7,4 +7,5 @@ export default defineConfig({
     environment: 'jsdom', // penting untuk DOM testing
     setupFiles: './vitest.setup.js', // konfigurasi tambahan
   },
+  base: '/dpsabsensi.github.io/',
 })
