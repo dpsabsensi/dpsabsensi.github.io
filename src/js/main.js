@@ -1,6 +1,11 @@
 // main.js
 /** @type {import('tailwindcss').Config} */
 import '../css/input.css';
+import '../css/style.css';
+import './config.js';
+import './utils.js';
+import './holiday.js';
+import './workdays.js';
 import { setupTabSwitching } from '/src/js/tabs.js';
 import { normalizeLogs, calculateSummaryForUser } from '/src/js/summary.js';
 
