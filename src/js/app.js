@@ -11,7 +11,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
   try {
     // Panggil endpoint upload.php
-    const uploadRes = await fetch('../php/upload.php', {
+    const uploadRes = await fetch('https://pusatpneumatic.com/absen/upload.php', {
       method: 'POST',
       body: formData,
     });
@@ -42,7 +42,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const parseForm = new FormData();
     parseForm.append('filename', filename);
 
-    const parseRes = await fetch('../php/parse.php', {
+    const parseRes = await fetch('https://pusatpneumatic.com/absen/parse.php', {
       method: 'POST',
       body: parseForm,
     });
