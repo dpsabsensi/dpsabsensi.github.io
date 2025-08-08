@@ -91,25 +91,6 @@ if ($handle !== false) {
             continue;
         }
 
-        // // Tentukan tipe berdasarkan waktu
-        // if ($minutesSinceMidnight >= 420 && $minutesSinceMidnight <= 600) { // 07:00 - 10:00
-        //     $type = "in";
-        // } elseif ($minutesSinceMidnight >= 690 && $minutesSinceMidnight <= 780) { // 11:30 - 13:00
-        //     // break-in atau break-out tergantung entry sebelumnya
-        //     $logsForDate = $userLogs[$id]["logs"][$date] ?? [];
-        //     $prev = end($logsForDate);
-        //     if ($prev && isset($prev["type"]) && $prev["type"] === "break-in") {
-        //         $type = "break-out";
-        //     } else {
-        //         $type = "break-in";
-        //     }
-        // } elseif ($minutesSinceMidnight >= 960 && $minutesSinceMidnight <= 1439) { // 16:00 - 23:59
-        //     $type = "out";
-        // } else {
-        //     // Diluar rentang, abaikan saja
-        //     continue;
-        // }
-
         if (!isset($userLogs[$id])) {
             $userLogs[$id] = [
                 "id" => (int)$id,

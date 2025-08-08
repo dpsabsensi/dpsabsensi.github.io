@@ -30,10 +30,10 @@ document.getElementById('upload-form').addEventListener('submit', async function
       return;
     }
 
-    // if (!uploadResult.success) {
-    //   messageEl.innerText = '❌ Upload gagal: ' + uploadResult.message;
-    //   return;
-    // }
+    if (!uploadResult.success) {
+      messageEl.innerText = '❌ Upload gagal: ' + uploadResult.message;
+      return;
+    }
     
     // Jika upload berhasil, lanjutkan proses parse
     const filename = uploadResult.filename;
@@ -58,10 +58,10 @@ document.getElementById('upload-form').addEventListener('submit', async function
       return;
     }
 
-    // if (!parseResult.success) {
-    //   messageEl.innerText = '⚠️ Parsing gagal: ' + parseResult.message;
-    //   return;
-    // }
+    if (!parseResult.success) {
+      messageEl.innerText = '⚠️ Parsing gagal: ' + parseResult.message;
+      return;
+    }
 
     messageEl.innerText = '✅ Sukses! Data berhasil diparse';
     // console.log("Parsed data:", parseResult.data);
