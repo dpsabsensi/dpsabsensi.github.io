@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getSelectedFilePath() {
     const year = document.getElementById('yearSelect')?.value;
     const month = document.getElementById('monthSelect')?.value;
-    return `/data/json/${year}/${year}-${month}.json`;
+    return `https://pusatpneumatic.com/absen/json/${year}/${year}-${month}.json`;
   }
 
   async function loadData() {
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const yearSelect = document.getElementById('yearSelect');
     const monthSelect = document.getElementById('monthSelect');
 
-    const res = await fetch('/data/json/list_index.json'); // JSON ini disiapkan dari backend
+    const res = await fetch('https://pusatpneumatic.com/absen/json/list_index.json'); // JSON ini disiapkan dari backend
     const index = await res.json();
 
     // Isi dropdown tahun
