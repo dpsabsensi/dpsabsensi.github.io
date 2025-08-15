@@ -14,8 +14,8 @@
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="nama">Nama</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="tanggal">Tanggal</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Masuk</th>
-            <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Break-In</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Break-Out</th>
+            <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Break-In</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Keluar</th>
             <th class="px-1 py-3 border-b border-gray-300 text-center cursor-pointer rounded-tr-lg w-30" data-sort="keluar">MT</th>
           </tr>
@@ -23,8 +23,8 @@
             <td class="px-4 py-3 border-b text-sm font-medium text-gray-700">${y}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-gray-600">${x.replaceAll("\\/","/")}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-green-700 font-semibold">${L}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${D}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${I}</td>
+            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${D}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${k}</td>
             <td class="px-4 py-3 border-b text-center text-sm">${$}</td>
           `,i.appendChild(M)});const f=document.createElement("tr");f.className="hover:bg-blue-50 transition-colors",f.innerHTML=`
