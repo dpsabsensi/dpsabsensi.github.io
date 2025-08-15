@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="nama">Nama</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="tanggal">Tanggal</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Masuk</th>
-            <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Break-In</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Break-Out</th>
+            <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Break-In</th>
             <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Keluar</th>
             <th class="px-1 py-3 border-b border-gray-300 text-center cursor-pointer rounded-tr-lg w-30" data-sort="keluar">MT</th>
           </tr>
@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td class="px-4 py-3 border-b text-sm font-medium text-gray-700">${nama}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-gray-600">${tanggal.replaceAll('\\/', '/')}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-green-700 font-semibold">${jamMasuk}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakIn}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakOut}</td>
+            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakIn}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${jamKeluar}</td>
             <td class="px-4 py-3 border-b text-center text-sm">${status}</td>
           `;
