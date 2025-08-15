@@ -36,6 +36,6 @@ export function getHariKerjaSeharusnyaDariKalender(tahun, bulan) {
     hasil.push(tanggal);
   }
 
-  console.log('[AUDIT] Hari kerja ideal (kalender):', hasil.length);
+  // console.log('[AUDIT] Hari kerja ideal (kalender):', hasil.length);
   return hasil;
 }

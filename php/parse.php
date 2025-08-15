@@ -9,8 +9,8 @@ ini_set("display_startup_errors", 1);
 error_reporting(E_ALL);
 
 $tahun = date("Y");
-$uploadDir = __DIR__ . "/../public/data/uploads/$tahun/";
-$jsonDir = __DIR__ . "/../public/data/json/$tahun/";
+$uploadDir = __DIR__ . "/uploads/$tahun/";
+$jsonDir = __DIR__ . "/json/$tahun/";
 
 function getNamaBulan($angka) {
     $bulanMap = [
@@ -62,7 +62,7 @@ if ($handle !== false) {
         [$date, $time] = explode(" ", $datetime);
 
         // Deteksi apakah hari Sabtu
-        $dateTimeObj = DateTime::createFromFormat("m/d/Y", $date);
+        $dateTimeObj = DateTime::createFromFormat("Y/m/d", $date);
         $isSaturday = $dateTimeObj && $dateTimeObj->format("N") == 6; // 6 = Sabtu
 
         // Konversi ke timestamp jam-menit
@@ -141,11 +141,11 @@ file_put_contents($outputFile, json_encode(array_values($userLogs), JSON_PRETTY_
 echo json_encode([
     "success" => true,
     "message" => "Parsing selesai.",
-    "output" => "/public/data/json/$tahun/$outputFileName",
+    "output" => "/json/$tahun/$outputFileName",
     "data" => $userLogs
 ]);
 
 ob_end_flush();
-file_put_contents(__DIR__ . "/../log/log_parse_debug_last.txt", ob_get_contents());
+file_put_contents(__DIR__ . "/logs/log_parse_debug_last.txt", ob_get_contents());
 generate_json_index();
 ?>

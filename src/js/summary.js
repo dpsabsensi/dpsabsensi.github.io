@@ -14,14 +14,8 @@ import {
   isSabtu
 } from './utils.js';
 
-import {
-  isTanggalMerah
-} from './holiday.js';
-
-import {
-  getHariKerjaSeharusnya,
-  getHariKerjaSeharusnyaDariKalender
-} from './workdays.js';
+import { isTanggalMerah } from './holiday.js';
+import { getHariKerjaSeharusnyaDariKalender } from './workdays.js';
 
 // Normalisasi log harian jadi array objek per tanggal
 export function normalizeLogs(logs) {
@@ -32,7 +26,7 @@ export function normalizeLogs(logs) {
     const jamMasuk = dayLogs.find(l => l.type === 'in')?.time || null;
     const jamKeluar = [...dayLogs].reverse().find(l => l.type === 'out')?.time || null;
 
-    // Hitung break sebagai jeda antara out → in
+    // Hitung break (jeda antara out → in)
     const breaks = [];
     for (let i = 0; i < dayLogs.length - 1; i++) {
       if (dayLogs[i].type === 'out' && dayLogs[i + 1].type === 'in') {
@@ -54,14 +48,15 @@ export function normalizeLogs(logs) {
   return result;
 }
 
-// Hitung rekap kerja berdasarkan log per user
+// Hitung rekap kerja per user
 export function calculateSummaryForUser(logs) {
+  if (!logs.length) return null;
+
   const semuaTanggal = logs.map(l => l.tanggal);
   const jamKerjaStart = parseTime(JAM_KERJA_MULAI);
-  // Dengan:
-  const tahun = semuaTanggal[0].split('-')[0];
-  const bulan = semuaTanggal[0].split('-')[1];
-  const hariKerjaIdeal = getHariKerjaSeharusnyaDariKalender(Number(tahun), Number(bulan));
+
+  const [tahun, bulan] = semuaTanggal[0].split('-').map(Number);
+  const hariKerjaIdeal = getHariKerjaSeharusnyaDariKalender(tahun, bulan);
   const hariKerjaTercatat = new Set();
 
   let totalWork = 0;
@@ -75,68 +70,75 @@ export function calculateSummaryForUser(logs) {
 
   for (const log of logs) {
     const jamKerjaEnd = parseTime(isSabtu(log.tanggal) ? JAM_KERJA_SELESAI_SABTU : JAM_KERJA_SELESAI);
-    const tanggalLibur = isTanggalMerah(log.tanggal);
-    const jamMasuk = parseTime(log.jamMasuk);
-    const jamKeluar = parseTime(log.jamKeluar);
-    const durasi = jamKeluar - jamMasuk;
+    const tanggalLibur = log.holiday;
 
-    if (tanggalLibur) {
+    // Lewatin hari libur yang kosong
+    if (tanggalLibur && !log.jamMasuk && !log.jamKeluar) {
       libur++;
-      if (!log.jamMasuk && !log.jamKeluar) continue;
+      continue;
     }
 
+    const jamMasuk = parseTime(log.jamMasuk);
+    const jamKeluar = parseTime(log.jamKeluar);
+
+    // Catat missing (hanya in/out)
     if (jamMasuk === null || jamKeluar === null) {
       missing++;
       continue;
     }
 
-    // Tercatat sebagai hari kerja valid
+    // Masuk daftar kerja
     hariKerjaTercatat.add(log.tanggal);
 
-    totalWork += durasi;
+    // Durasi kerja total
+    const durasiKerja = jamKeluar - jamMasuk;
+    totalWork += durasiKerja;
 
+    // Telat
     const telat = jamMasuk - jamKerjaStart;
     if (telat > TOLERANSI_MENIT) {
       totalTelat += telat;
       totalDendaTelat += hitungDendaTelat(telat);
     }
 
+    // Pulang cepat
     const early = jamKerjaEnd - jamKeluar;
     if (early > TOLERANSI_MENIT) {
       totalEarly += early;
     }
 
+    // Lembur
     const lembur = jamKeluar - jamKerjaEnd;
     if (lembur > TOLERANSI_MENIT) {
       totalLembur += lembur;
     }
 
+    // Break total
     totalBreak += log.breaks.reduce((a, b) => a + b, 0);
   }
 
+  // Absence = hari kerja ideal tapi tidak tercatat
   const absence = hariKerjaIdeal.filter(tgl => !hariKerjaTercatat.has(tgl)).length;
+
+  // Hitung uang lembur
   const uangLemburKotor = Math.floor(totalLembur / 60) * TARIF_LEMBUR_PER_JAM;
   const uangLemburBersih = Math.max(uangLemburKotor - totalDendaTelat, 0);
 
+  // Jam kerja ideal total
   const jamKerjaIdeal = hariKerjaIdeal.reduce((total, tgl) => {
     const end = parseTime(isSabtu(tgl) ? JAM_KERJA_SELESAI_SABTU : JAM_KERJA_SELESAI);
-    const start = parseTime(JAM_KERJA_MULAI);
-    // const durasi = end - start;
-
-    // console.log(`[AUDIT] ${tgl} ${isSabtu(tgl) ? '(Sabtu)' : ''} → ${durasi} menit`);
-
-    return total + (end - start);
+    return total + (end - jamKerjaStart);
   }, 0);
 
-  console.log('[AUDIT] Total menit kerja ideal:', jamKerjaIdeal, 'menit');
-  console.log('[AUDIT] Total jam kerja ideal:', (jamKerjaIdeal / 60).toFixed(2), 'jam');
+  // Debug log (opsional)
+  console.log(`📊 Lembur: ${formatJamMenit(totalLembur)}, Kotor: Rp${uangLemburKotor}, Denda: Rp${totalDendaTelat}, Bersih: Rp${uangLemburBersih}`);
 
   return {
+    jamKerjaIdeal: formatJamMenit(jamKerjaIdeal),
     workMinutes: totalWork,
     workHours: formatJamMenit(totalWork),
     lemburHours: formatJamMenit(totalLembur),
     uangLemburKotor,
-    jamKerjaIdeal: formatJamMenit(jamKerjaIdeal),
     dendaTelat: totalDendaTelat,
     uangLembur: uangLemburBersih,
     telatHours: formatJamMenit(totalTelat),
