@@ -1,0 +1,48 @@
+<?php
+// cron_holidays.php
+// Cronjob cache tanggal merah tahunan
+
+ini_set("display_errors", 1);
+ini_set("display_startup_errors", 1);
+error_reporting(E_ALL);
+
+$dir = __DIR__ . "/holidays/";
+if (!is_dir($dir)) mkdir($dir, 0777, true);
+
+$year = date("Y");
+$url  = "https://libur.deno.dev/api?year=$year";
+$outFile = $dir . "$year.json";
+
+echo "Fetching $url ...\n";
+
+// --- cURL ---
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_FAILONERROR, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+curl_setopt($ch, CURLOPT_USERAGENT, "PHP-cron");
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+$json = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+if (curl_errno($ch) || $httpCode >= 400) {
+    echo "❌ Gagal ambil data libur untuk $year → " . curl_error($ch) . " (HTTP $httpCode)\n";
+    curl_close($ch);
+    exit(1);
+}
+curl_close($ch);
+
+// --- Parse JSON ---
+$data = json_decode($json, true);
+if (!is_array($data)) {
+    echo "❌ JSON invalid → simpan raw ke log\n";
+    file_put_contents($dir . "error_$year.log", date('c') . " → invalid JSON\n$json\n", FILE_APPEND);
+    exit(1);
+}
+
+// --- Simpan ke file ---
+file_put_contents($outFile, json_encode($data, JSON_PRETTY_PRINT));
+echo "✅ Disimpan ke $outFile (" . count($data) . " entri)\n";

@@ -6,146 +6,147 @@ import {
   TOLERANSI_MENIT,
   TARIF_LEMBUR_PER_JAM
 } from './config.js';
+import { parseTime, formatJamMenit, hitungDendaTelat, isSabtu, toYmd } from './utils.js';
 
-import {
-  parseTime,
-  formatJamMenit,
-  hitungDendaTelat,
-  isSabtu
-} from './utils.js';
-
-import { isTanggalMerah } from './holiday.js';
-import { getHariKerjaSeharusnyaDariKalender } from './workdays.js';
-
-// Normalisasi log harian jadi array objek per tanggal
-export function normalizeLogs(logs) {
-  const result = [];
-
-  for (const tanggal in logs) {
-    const dayLogs = logs[tanggal];
-    const jamMasuk = dayLogs.find(l => l.type === 'in')?.time || null;
-    const jamKeluar = [...dayLogs].reverse().find(l => l.type === 'out')?.time || null;
-
-    // Hitung break (jeda antara out → in)
+/**
+ * Normalisasi log harian
+ */
+export function normalizeLogs(days) {
+  return Object.entries(days).map(([tanggal, info]) => {
+    const logs = info.l || []; // compact enum logs
+    let jamMasuk = null;
+    let jamKeluar = null;
     const breaks = [];
-    for (let i = 0; i < dayLogs.length - 1; i++) {
-      if (dayLogs[i].type === 'out' && dayLogs[i + 1].type === 'in') {
-        const durasi = parseTime(dayLogs[i + 1].time) - parseTime(dayLogs[i].time);
-        if (durasi > 0) breaks.push(durasi);
-      }
-    }
 
-    result.push({
-      tanggal,
+    logs.forEach((l, idx) => {
+      const [time, type] = l;
+      if (type === 0 && !jamMasuk) jamMasuk = time; // IN
+      if (type === 1) jamKeluar = time; // OUT
+
+      // BREAK_OUT -> BREAK_IN
+      if (idx < logs.length - 1) {
+        const [nextTime, nextType] = logs[idx + 1];
+        if (type === 3 && nextType === 2) {
+          const durasi = parseTime(nextTime) - parseTime(time);
+          if (durasi > 0) breaks.push(durasi);
+        }
+      }
+    });
+
+    return {
+      tanggal: toYmd(tanggal),
       jamMasuk,
       jamKeluar,
       breaks,
       isEmpty: !jamMasuk && !jamKeluar,
-      holiday: isTanggalMerah(tanggal)
-    });
-  }
-
-  return result;
+      holiday: info.s === 2, // status L = libur
+      status: info.s
+    };
+  });
 }
 
-// Hitung rekap kerja per user
+/**
+ * Hitung jam kerja bersih dari log array
+ */
+export function hitungJamKerjaBersih(logArray) {
+  const jamMasuk = logArray.find(l => l.type === 0)?.time || null;
+  const jamKeluar = [...logArray].reverse().find(l => l.type === 1)?.time || null;
+  if (!jamMasuk || !jamKeluar) return 0;
+
+  const breaks = [];
+  for (let i = 0; i < logArray.length - 1; i++) {
+    const [t1, type1] = logArray[i];
+    const [t2, type2] = logArray[i + 1];
+    if (type1 === 3 && type2 === 2) {
+      const durasi = parseTime(t2) - parseTime(t1);
+      if (durasi > 0) breaks.push(durasi);
+    }
+  }
+
+  return (parseTime(jamKeluar) - parseTime(jamMasuk) - breaks.reduce((a,b)=>a+b,0)) / 60;
+}
+
+/**
+ * Hitung summary tanpa fetch lagi
+ */
 export function calculateSummaryForUser(logs) {
-  if (!logs.length) return null;
+  if (!logs || logs.length === 0) return {
+    workMinutes:0, workHours:"0j 0m", lemburHours:"0j 0m",
+    uangLemburKotor:0, jamKerjaIdeal:"0j 0m", dendaTelat:0,
+    uangLembur:0, telatHours:"0j 0m", earlyOutHours:"0j 0m",
+    absenceDays:0, missingDays:0, holidayDays:0, breakHours:"0j 0m"
+  };
 
-  const semuaTanggal = logs.map(l => l.tanggal);
-  const jamKerjaStart = parseTime(JAM_KERJA_MULAI);
-
-  const [tahun, bulan] = semuaTanggal[0].split('-').map(Number);
-  const hariKerjaIdeal = getHariKerjaSeharusnyaDariKalender(tahun, bulan);
+  let totalWork=0, totalLembur=0, totalBreak=0, totalDenda=0;
+  let totalTelat=0, totalEarly=0, missing=0, libur=0;
   const hariKerjaTercatat = new Set();
 
-  let totalWork = 0;
-  let totalLembur = 0;
-  let totalBreak = 0;
-  let totalDendaTelat = 0;
-  let totalTelat = 0;
-  let totalEarly = 0;
-  let missing = 0;
-  let libur = 0;
+  logs.forEach(log => {
+    if (log.holiday && !log.jamMasuk && !log.jamKeluar) { libur++; return; }
+    hariKerjaTercatat.add(log.tanggal);
 
-  for (const log of logs) {
-    const jamKerjaEnd = parseTime(isSabtu(log.tanggal) ? JAM_KERJA_SELESAI_SABTU : JAM_KERJA_SELESAI);
-    const tanggalLibur = log.holiday;
-
-    // Lewatin hari libur yang kosong
-    if (tanggalLibur && !log.jamMasuk && !log.jamKeluar) {
-      libur++;
-      continue;
-    }
+    if (!log.jamMasuk || !log.jamKeluar) { missing++; return; }
 
     const jamMasuk = parseTime(log.jamMasuk);
     const jamKeluar = parseTime(log.jamKeluar);
+    const jamKerjaEnd = parseTime(isSabtu(log.tanggal) ? JAM_KERJA_SELESAI_SABTU : JAM_KERJA_SELESAI);
+    const durasi = jamKeluar - jamMasuk;
+    totalWork += durasi;
 
-    // Catat missing (hanya in/out)
-    if (jamMasuk === null || jamKeluar === null) {
-      missing++;
-      continue;
-    }
+    const telat = jamMasuk - parseTime(JAM_KERJA_MULAI);
+    if (telat > TOLERANSI_MENIT) { totalTelat += telat; totalDenda += hitungDendaTelat(telat); }
 
-    // Masuk daftar kerja
-    hariKerjaTercatat.add(log.tanggal);
-
-    // Durasi kerja total
-    const durasiKerja = jamKeluar - jamMasuk;
-    totalWork += durasiKerja;
-
-    // Telat
-    const telat = jamMasuk - jamKerjaStart;
-    if (telat > TOLERANSI_MENIT) {
-      totalTelat += telat;
-      totalDendaTelat += hitungDendaTelat(telat);
-    }
-
-    // Pulang cepat
     const early = jamKerjaEnd - jamKeluar;
-    if (early > TOLERANSI_MENIT) {
-      totalEarly += early;
-    }
+    if (early > TOLERANSI_MENIT) totalEarly += early;
 
-    // Lembur
     const lembur = jamKeluar - jamKerjaEnd;
-    if (lembur > TOLERANSI_MENIT) {
-      totalLembur += lembur;
-    }
+    if (lembur > TOLERANSI_MENIT) totalLembur += lembur;
 
-    // Break total
-    totalBreak += log.breaks.reduce((a, b) => a + b, 0);
-  }
+    totalBreak += log.breaks.reduce((a,b)=>a+b,0);
+  });
 
-  // Absence = hari kerja ideal tapi tidak tercatat
-  const absence = hariKerjaIdeal.filter(tgl => !hariKerjaTercatat.has(tgl)).length;
+  const absence = logs.filter(l => !l.holiday && l.isEmpty).length;
 
-  // Hitung uang lembur
-  const uangLemburKotor = Math.floor(totalLembur / 60) * TARIF_LEMBUR_PER_JAM;
-  const uangLemburBersih = Math.max(uangLemburKotor - totalDendaTelat, 0);
+  const uangLemburKotor = Math.floor(totalLembur/60)*TARIF_LEMBUR_PER_JAM;
+  const uangLembur = Math.max(uangLemburKotor-totalDenda,0);
 
-  // Jam kerja ideal total
-  const jamKerjaIdeal = hariKerjaIdeal.reduce((total, tgl) => {
-    const end = parseTime(isSabtu(tgl) ? JAM_KERJA_SELESAI_SABTU : JAM_KERJA_SELESAI);
-    return total + (end - jamKerjaStart);
-  }, 0);
-
-  // Debug log (opsional)
-  console.log(`📊 Lembur: ${formatJamMenit(totalLembur)}, Kotor: Rp${uangLemburKotor}, Denda: Rp${totalDendaTelat}, Bersih: Rp${uangLemburBersih}`);
+  const jamKerjaIdeal = logs.reduce((sum, log) => {
+    if (log.holiday) return sum;
+    const end = parseTime(isSabtu(log.tanggal) ? JAM_KERJA_SELESAI_SABTU : JAM_KERJA_SELESAI);
+    const start = parseTime(JAM_KERJA_MULAI);
+    return sum + (end-start);
+  },0);
 
   return {
-    jamKerjaIdeal: formatJamMenit(jamKerjaIdeal),
     workMinutes: totalWork,
     workHours: formatJamMenit(totalWork),
     lemburHours: formatJamMenit(totalLembur),
     uangLemburKotor,
-    dendaTelat: totalDendaTelat,
-    uangLembur: uangLemburBersih,
+    jamKerjaIdeal: formatJamMenit(jamKerjaIdeal),
+    dendaTelat: totalDenda,
+    uangLembur,
     telatHours: formatJamMenit(totalTelat),
     earlyOutHours: formatJamMenit(totalEarly),
     absenceDays: absence,
     missingDays: missing,
     holidayDays: libur,
-    breakHours: formatJamMenit(totalBreak),
+    breakHours: formatJamMenit(totalBreak)
   };
+}
+
+/**
+ * Investigasi detail per hari tanpa fetch
+ */
+export function investigasiSummary(logs) {
+  let totalMasuk=0, totalAbsen=0, totalMissing=0, totalHoliday=0;
+
+  logs.forEach(log => {
+    if (!log.jamMasuk && !log.jamKeluar) {
+      if (log.holiday) totalHoliday++; 
+      else totalAbsen++;
+    } else if (!log.jamMasuk || !log.jamKeluar) { totalMissing++; totalMasuk++; }
+    else totalMasuk++;
+  });
+
+  return { totalMasuk, totalAbsen, totalMissing, totalHoliday };
 }

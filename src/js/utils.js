@@ -1,56 +1,46 @@
 // utils.js
 
-// Mengubah waktu format "HH:MM" menjadi total menit
+/**
+ * Parse jam string "HH:MM" jadi menit
+ */
 export function parseTime(str) {
-  if (!str || typeof str !== 'string') return null;
-  const [h, m] = str.split(':').map(Number);
+  if (!str) return null;
+  const [h, m] = str.split(":").map(Number);
   return h * 60 + m;
 }
 
-// Mengubah total menit menjadi format "Xj Ym"
 export function formatJamMenit(menit) {
   const jam = Math.floor(menit / 60);
   const sisa = menit % 60;
   return `${jam}j ${sisa}m`;
 }
 
-// export function isSabtu(tanggal) {
-//   console.log("isSabtu tanggal:", tanggal);
-//   const [year, month, day] = tanggal.split('-').map(Number);
-//   const date = new Date(year, month - 1, day);
-//   console.log("→ Day:", date.getDay());
-//   return date.getDay() === 6;
-// }
-
-// export function isSabtu(tanggal) {
-//   // Ganti semua "/" jadi "-"
-//   const [year, month, day] = tanggal.replace(/\//g, '-').split('-').map(Number);
-//   const date = new Date(year, month - 1, day);
-//   return date.getDay() === 6;
-// }
-
-export function isSabtu(tanggal) {
-  if (!tanggal) return false;
-  const t = tanggal.replace(/\//g, '-'); // normalisasi
-  const parts = t.split('-').map(Number);
-  let y, m, d;
-  // tebak format paling umum
-  if (parts[0] >= 1900) {        // YYYY-MM-DD
-    [y, m, d] = parts;
-  } else if (parts[2] >= 1900) { // DD-MM-YYYY
-    [d, m, y] = parts;
-  } else {                       // fallback (anggap YYYY-MM-DD)
-    [y, m, d] = parts;
-  }
-  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
-  return !Number.isNaN(date.getTime()) && date.getDay() === 6;
+export function hitungDendaTelat(menitTelat) {
+  return Math.floor(menitTelat / 60) * 5000;
 }
 
-// Fungsi untuk menghitung denda keterlambatan
-export function hitungDendaTelat(menitTelat) {
-  if (menitTelat <= 5) return 0;
-  if (menitTelat <= 15) return 10000;
-  if (menitTelat <= 30) return 25000;
-  if (menitTelat <= 60) return 50000;
-  return 100000;
+export function isSabtu(tanggal) {
+  const d = new Date(tanggal);
+  return d.getDay() === 6;
+}
+
+export function toYmd(input) {
+  if (!input) return "";
+  if (input instanceof Date) {
+    const y = input.getFullYear();
+    const m = String(input.getMonth() + 1).padStart(2, "0");
+    const d = String(input.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  let s = String(input).trim();
+  if (s.includes("/")) {
+    const [a, b, c] = s.split("/");
+    if (a.length <= 2 && b.length <= 2 && c.length === 4) return `${c}-${String(a).padStart(2, "0")}-${String(b).padStart(2, "0")}`;
+    if (a.length === 4) return `${a}-${String(b).padStart(2, "0")}-${String(c).padStart(2, "0")}`;
+  }
+  if (s.includes("-")) {
+    const [y, m, d] = s.split("-");
+    if (y.length === 4) return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  return s;
 }
