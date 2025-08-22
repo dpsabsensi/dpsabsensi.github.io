@@ -69,7 +69,7 @@ export function hitungJamKerjaBersih(logArray) {
 /**
  * Hitung summary tanpa fetch lagi
  */
-export function calculateSummaryForUser(logs) {
+export async function calculateSummaryForUser(logs) {
   if (!logs || logs.length === 0) return {
     workMinutes:0, workHours:"0j 0m", lemburHours:"0j 0m",
     uangLemburKotor:0, jamKerjaIdeal:"0j 0m", dendaTelat:0,
@@ -81,11 +81,19 @@ export function calculateSummaryForUser(logs) {
   let totalTelat=0, totalEarly=0, missing=0, libur=0;
   const hariKerjaTercatat = new Set();
 
+  const dendaPerHari = []; // 🔑 array buat log
+
   logs.forEach(log => {
-    if (log.holiday && !log.jamMasuk && !log.jamKeluar) { libur++; return; }
+    if (log.holiday && !log.jamMasuk && !log.jamKeluar) {
+      libur++; 
+      return; 
+    }
     hariKerjaTercatat.add(log.tanggal);
 
-    if (!log.jamMasuk || !log.jamKeluar) { missing++; return; }
+    if (!log.jamMasuk || !log.jamKeluar) {
+      missing++; 
+      return; 
+    }
 
     const jamMasuk = parseTime(log.jamMasuk);
     const jamKeluar = parseTime(log.jamKeluar);
@@ -93,16 +101,27 @@ export function calculateSummaryForUser(logs) {
     const durasi = jamKeluar - jamMasuk;
     totalWork += durasi;
 
+    // ✅ Denda telat per hari
     const telat = jamMasuk - parseTime(JAM_KERJA_MULAI);
-    if (telat > TOLERANSI_MENIT) { totalTelat += telat; totalDenda += hitungDendaTelat(telat); }
+    if (telat > TOLERANSI_MENIT) {
+      totalTelat += telat;
+      const dendaHariIni = hitungDendaTelat(telat);
+      totalDenda += dendaHariIni;
+    }
 
+    // Early out
     const early = jamKerjaEnd - jamKeluar;
     if (early > TOLERANSI_MENIT) totalEarly += early;
 
+    // Lembur
     const lembur = jamKeluar - jamKerjaEnd;
-    if (lembur > TOLERANSI_MENIT) totalLembur += lembur;
+    if (lembur > TOLERANSI_MENIT) {
+      totalLembur += lembur;
+    }
 
-    totalBreak += log.breaks.reduce((a,b)=>a+b,0);
+    // Break
+    const totalBreakHariIni = log.breaks.reduce((a,b)=>a+b,0);
+    totalBreak += totalBreakHariIni;
   });
 
   const absence = logs.filter(l => !l.holiday && l.isEmpty).length;
@@ -130,23 +149,7 @@ export function calculateSummaryForUser(logs) {
     absenceDays: absence,
     missingDays: missing,
     holidayDays: libur,
-    breakHours: formatJamMenit(totalBreak)
+    breakHours: formatJamMenit(totalBreak),
+    dendaPerHari,
   };
-}
-
-/**
- * Investigasi detail per hari tanpa fetch
- */
-export function investigasiSummary(logs) {
-  let totalMasuk=0, totalAbsen=0, totalMissing=0, totalHoliday=0;
-
-  logs.forEach(log => {
-    if (!log.jamMasuk && !log.jamKeluar) {
-      if (log.holiday) totalHoliday++; 
-      else totalAbsen++;
-    } else if (!log.jamMasuk || !log.jamKeluar) { totalMissing++; totalMasuk++; }
-    else totalMasuk++;
-  });
-
-  return { totalMasuk, totalAbsen, totalMissing, totalHoliday };
 }

@@ -15,8 +15,16 @@ export function formatJamMenit(menit) {
   return `${jam}j ${sisa}m`;
 }
 
+const aturanDenda = [
+  [5, 0],
+  [15, 10000],
+  [30, 25000],
+  [60, 50000],
+  [Infinity, 100000]
+];
+
 export function hitungDendaTelat(menitTelat) {
-  return Math.floor(menitTelat / 60) * 5000;
+  return aturanDenda.find(([max]) => menitTelat <= max)[1];
 }
 
 export function isSabtu(tanggal) {

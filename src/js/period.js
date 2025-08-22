@@ -1,6 +1,4 @@
 // period.js
-import { fetchTanggalMerah } from "./holiday.js";
-
 /**
  * Ambil tahun & bulan dari select box
  */
@@ -47,9 +45,6 @@ export async function initPeriodSelectors(index) {
     monthSelect.value = defaultMonth;
   }
 
-  // fetch tanggal merah untuk default tahun
-  await fetchTanggalMerah(defaultYear);
-
   return { year: defaultYear, month: defaultMonth };
 }
 
@@ -67,9 +62,6 @@ export async function updateMonthsForYear(index, year) {
     opt.textContent = month;
     monthSelect.appendChild(opt);
   });
-
-  // fetch tanggal merah ulang untuk tahun baru
-  await fetchTanggalMerah(year);
 
   return months[0] || null; // kembalikan bulan pertama
 }

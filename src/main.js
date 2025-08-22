@@ -62,8 +62,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
 
       const users = data.u || [];
-      console.log("Users loaded:", users.map(u => u.n));
-
       for (const user of users) {
         const nama = user.n;
         const days = user.d || {};
