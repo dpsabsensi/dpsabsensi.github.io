@@ -1,12 +1,12 @@
 // main.js
 import './css/input.css';
 import './css/style.css';
-import './js/config.js';
-import './js/app.js';
+import './js/app.js'; 
+import { API_URL } from './js/config.js';
 import { formatJamMenit } from './js/utils.js';
-import { normalizeLogs, calculateSummaryForUser } from './js/summary.js';
-
+import { getJamKerjaIdeal } from './js/ideal.js';
 import { setupTabSwitching } from './js/tabs.js';
+import { normalizeLogs, calculateSummaryForUser } from './js/summary.js';
 import { initPeriodSelectors, updateMonthsForYear } from "./js/period.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getSelectedFilePath() {
     const year = document.getElementById('yearSelect')?.value;
     const month = document.getElementById('monthSelect')?.value;
-    return `https://pusatpneumatic.com/absen/json/${year}/${year}-${month}.json`;
+    return `${API_URL}/json/${year}/${year}-${month}.json`;
   }
 
   async function loadData() {
@@ -31,6 +31,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const detailHead = document.getElementById('detailHead');
       const detailBody = document.getElementById('detailBody');
 
+      // 👉 get jam kerja ideal bulan ini
+      const ideal = getJamKerjaIdeal(data); 
+      console.log(`
+      ================================================
+      Jam kerja ideal bulan ini: ${ideal.formatted} (${ideal.minutes} menit)
+      ================================================`);
+
       summaryBody.innerHTML = '';
       detailBody.innerHTML = '';
 
@@ -38,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       summaryHead.innerHTML = `
         <tr>
           <th class="px-4 py-3 border-b text-left">Nama</th>
-          <th class="px-4 py-3 border-b text-center">Work</th>
+          <th class="px-4 py-3 border-b text-center">Work<br>${ideal.formatted}</th>
           <th class="px-4 py-3 border-b text-center">Lembur (jam)</th>
           <th class="px-4 py-3 border-b text-center">Uang Lembur</th>
           <th class="px-4 py-3 border-b text-center">Telat (jam)</th>
@@ -64,13 +71,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const users = data.u || [];
       for (const user of users) {
         const nama = user.n;
-        const days = user.d || {};
+        const days = (user.d || []).map(val =>
+          typeof val === "number" ? { s: val, l: [] } : val
+        );
 
-        // normalisasi log
         const logs = normalizeLogs(days);
 
         // hitung summary menggunakan fungsi calculateSummaryForUser
-        const summary = await calculateSummaryForUser(logs);
+        const summary = await calculateSummaryForUser(logs, ideal, nama);
 
         // Detail per hari
         if (logs.length === 0) logs.push({ tanggal: '-', jamMasuk: '-', jamKeluar: '-', breaks: [], status: 0, holiday: 0 });
@@ -81,18 +89,24 @@ document.addEventListener('DOMContentLoaded', async () => {
           else if (log.isEmpty) ket = "Missing Time";
           else if (log.holiday === 1) ket = "Tanggal Merah";
 
-          const breakOut = log.breaks.length ? formatJamMenit(log.breaks[0]) : '-';
-          const breakIn = log.breaks.length ? formatJamMenit(log.breaks[log.breaks.length - 1]) : '-';
+          // const jamMasuk = log.jamMasuk;
+          // const jamKeluar = log.jamKeluar;
+          // const breakOut = log.breaks.length >= 1 ? log.breaks[0] : '-';
+          // const breakIn  = log.breaks.length >= 2 ? log.breaks[log.breaks.length - 1] : '-';
+          const jamMasuk = formatJamMenit(log.jamMasuk);
+          const jamKeluar = formatJamMenit(log.jamKeluar);
+          const breakOut = log.breaks.length >= 1 ? formatJamMenit(log.breaks[0]) : '-';
+          const breakIn  = log.breaks.length >= 2 ? formatJamMenit(log.breaks[log.breaks.length - 1]) : '-';
 
           const tr = document.createElement('tr');
           tr.className = 'hover:bg-blue-50 transition-colors';
           tr.innerHTML = `
             <td class="px-4 py-3 border-b text-sm font-medium text-gray-700">${nama}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-gray-600">${log.tanggal}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-green-700 font-semibold">${log.jamMasuk || '-'}</td>
+            <td class="px-4 py-3 border-b text-center text-sm text-green-700 font-semibold">${jamMasuk || '-'}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakOut}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakIn}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${log.jamKeluar || '-'}</td>
+            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${jamKeluar || '-'}</td>
             <td class="px-4 py-3 border-b text-center text-sm text-blue-700">${ket}</td>
           `;
           detailBody.appendChild(tr);
@@ -167,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function populateMonthYearSelectors() {
-    const res = await fetch("https://pusatpneumatic.com/absen/json/list_index.json");
+    const res = await fetch(`${API_URL}/json/list_index.json`);
     const index = await res.json();
 
     const { year } = await initPeriodSelectors(index);

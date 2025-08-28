@@ -22,4 +22,13 @@ export function setupTabSwitching({ summaryId, detailId, tabSummaryId, tabDetail
     tabSummary.classList.replace("bg-blue-600", "bg-gray-200");
     tabSummary.classList.replace("text-white", "text-gray-700");
   });
+
+  tabDetail.addEventListener("click", () => {
+    summaryTab.classList.add("hidden");
+    detailTab.classList.remove("hidden");
+    tabDetail.classList.replace("bg-gray-200", "bg-blue-600");
+    tabDetail.classList.replace("text-gray-700", "text-white");
+    tabSummary.classList.replace("bg-blue-600", "bg-gray-200");
+    tabSummary.classList.replace("text-white", "text-gray-700");
+  });
 }

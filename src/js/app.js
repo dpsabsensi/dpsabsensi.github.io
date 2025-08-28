@@ -1,4 +1,5 @@
 // app.js
+import { API_URL } from './config.js';
 document.getElementById('upload-form').addEventListener('submit', async function (e) {
   e.preventDefault();
 
@@ -11,7 +12,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
   try {
     // Panggil endpoint upload.php
-    const uploadRes = await fetch('https://pusatpneumatic.com/absen/upload.php', {
+    const uploadRes = await fetch(`${API_URL}/upload.php`, {
       method: 'POST',
       body: formData,
     });

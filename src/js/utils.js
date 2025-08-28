@@ -10,9 +10,10 @@ export function parseTime(str) {
 }
 
 export function formatJamMenit(menit) {
-  const jam = Math.floor(menit / 60);
-  const sisa = menit % 60;
-  return `${jam}j ${sisa}m`;
+  if (menit == null) return "-";
+  const h = Math.floor(menit / 60);
+  const m = String(menit % 60).padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 const aturanDenda = [
