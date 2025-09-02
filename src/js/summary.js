@@ -64,30 +64,9 @@ export function normalizeLogs(days) {
 }
 
 /**
- * Hitung jam kerja bersih dari log array
- */
-export function hitungJamKerjaBersih(logArray) {
-  const jamMasuk = logArray.find(l => l.type === 0)?.time || null;
-  const jamKeluar = [...logArray].reverse().find(l => l.type === 1)?.time || null;
-  if (!jamMasuk || !jamKeluar) return 0;
-
-  const breaks = [];
-  for (let i = 0; i < logArray.length - 1; i++) {
-    const [t1, type1] = logArray[i];
-    const [t2, type2] = logArray[i + 1];
-    if (type1 === 3 && type2 === 2) {
-      const durasi = t2 - t1;
-      if (durasi > 0) breaks.push(durasi);
-    }
-  }
-
-  return (jamKeluar - jamMasuk - breaks.reduce((a,b)=>a+b,0)) / 60;
-}
-
-/**
  * Hitung summary tanpa fetch lagi
  */
-export async function calculateSummaryForUser(logs, ideal, nama = "") {
+export async function calculateSummaryForUser(logs, ideal, nama = "", year, month) {
   if (!logs || logs.length === 0) return {
     workMinutes:0, workHours:"00:00", lemburHours:"00:00",
     uangLemburKotor:0, jamKerjaIdeal:"00:00", dendaTelat:0,
@@ -118,7 +97,7 @@ export async function calculateSummaryForUser(logs, ideal, nama = "") {
     const jamKeluar = log.jamKeluar;
 
     // 🔑 tentukan jam kerja selesai sesuai hari
-    const jamKerjaEnd = isSabtu(log.tanggal) 
+    const jamKerjaEnd = isSabtu(year, month, log.tanggal) 
       ? JAM_KERJA_SELESAI_SABTU 
       : JAM_KERJA_SELESAI;
 
@@ -149,15 +128,13 @@ export async function calculateSummaryForUser(logs, ideal, nama = "") {
     const totalBreakHariIni = log.breaks.reduce((a,b)=>a+b,0);
     totalBreak += totalBreakHariIni;
 
-    // console.log({
-    //   tanggal: log.tanggal,
-    //   jamMasuk,
-    //   jamKeluar,
-    //   jamKerjaEnd,
-    //   totalBreak,
-    //   breakHariIni: formatJamMenit(totalBreakHariIni),
-    //   lembur: formatJamMenit(Math.max(jamKeluar - jamKerjaEnd, 0))
-    // });
+    // console.log(`
+    //   ${nama}
+    //   tanggal      : ${log.tanggal},
+    //   Jam Keluar   : ${jamKeluar},
+    //   Jam Kerja End:${jamKerjaEnd},
+    //   Lembur       : ${formatJamMenit(Math.max(jamKeluar - jamKerjaEnd, 0))}
+    // `);
   });
 
   const absence = logs.filter(l => !l.holiday && l.isEmpty).length;
@@ -168,10 +145,10 @@ export async function calculateSummaryForUser(logs, ideal, nama = "") {
   if (ideal) {
     const rumus = lemburPerHari.map(l => l.lembur).join(" + ");
     const total = lemburPerHari.reduce((a, b) => a + b.lembur, 0);
-    console.log(`[ ${nama} ]
-      Total Kerja  : ${formatJamMenit(totalWork)} (${totalWork} menit),
-      Selisih      : ${formatJamMenit(x)} (${x} menit)
-      Lembur Harian: ${rumus} = ${total} menit (${formatJamMenit(total)})`);
+    // console.log(`[ ${nama} ]
+    //   Total Kerja  : ${formatJamMenit(totalWork)} (${totalWork} menit),
+    //   Selisih      : ${formatJamMenit(x)} (${x} menit)
+    //   Lembur Harian: ${rumus} = ${total} menit (${formatJamMenit(total)})`);
   }
 
   return {

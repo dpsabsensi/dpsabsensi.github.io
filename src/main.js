@@ -3,11 +3,12 @@ import './css/input.css';
 import './css/style.css';
 import './js/app.js'; 
 import { API_URL } from './js/config.js';
+import { setupTabs } from './js/tabs.js';
 import { formatJamMenit } from './js/utils.js';
 import { getJamKerjaIdeal } from './js/ideal.js';
-import { setupTabSwitching } from './js/tabs.js';
 import { normalizeLogs, calculateSummaryForUser } from './js/summary.js';
 import { initPeriodSelectors, updateMonthsForYear } from "./js/period.js";
+import { sortTable, generateTableRows, generateTableHead } from './js/table.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -25,152 +26,128 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res.ok) throw new Error('Gagal memuat data JSON');
 
       const data = await res.json();
-      const nameInput = document.getElementById('filterName');
+      const nameInput   = document.getElementById('filterName');
       const summaryHead = document.getElementById('summaryHead');
       const summaryBody = document.getElementById('summaryBody');
-      const detailHead = document.getElementById('detailHead');
-      const detailBody = document.getElementById('detailBody');
+      const detailHead  = document.getElementById('detailHead');
+      const detailBody  = document.getElementById('detailBody');
 
-      // 👉 get jam kerja ideal bulan ini
-      const ideal = getJamKerjaIdeal(data); 
-      console.log(`
-      ================================================
-      Jam kerja ideal bulan ini: ${ideal.formatted} (${ideal.minutes} menit)
-      ================================================`);
+      const ideal = getJamKerjaIdeal(data);
 
-      summaryBody.innerHTML = '';
-      detailBody.innerHTML = '';
+      const summaryColumns = [
+        { key: "nama",         label: "Nama", type: "string"},
+        { key: "workHours",    label: `Work<br>${ideal.formatted}`, type: "time" },
+        { key: "lemburHours",  label: "Lembur (jam)", type: "time" },
+        { key: "uangLembur",   label: "Uang Lembur", type: "string" },
+        { key: "telatHours",   label: "Telat (jam)", type: "time" },
+        { key: "earlyOutHours",label: "Early Out", type: "time" },
+        { key: "absenceDays",  label: "Absence", type: "number" },
+        { key: "breakHours",   label: "Break (jam)", type: "time" },
+      ];
 
-      // Header Summary
-      summaryHead.innerHTML = `
-        <tr>
-          <th class="px-4 py-3 border-b text-left">Nama</th>
-          <th class="px-4 py-3 border-b text-center">Work<br>${ideal.formatted}</th>
-          <th class="px-4 py-3 border-b text-center">Lembur (jam)</th>
-          <th class="px-4 py-3 border-b text-center">Uang Lembur</th>
-          <th class="px-4 py-3 border-b text-center">Telat (jam)</th>
-          <th class="px-4 py-3 border-b text-center">Early Out</th>
-          <th class="px-4 py-3 border-b text-center">Absence</th>
-          <th class="px-4 py-3 border-b text-center">Break (jam)</th>
-        </tr>
-      `;
+      const detailColumns = [
+        { key: "nama",      label: "Nama", type: "string" },
+        { key: "tanggal",   label: "Tanggal", type: "number" },
+        { key: "jamMasuk",  label: "Jam Masuk", type: "time" },
+        { key: "breakOut",  label: "Jam Break-Out", type: "time" },
+        { key: "breakIn",   label: "Jam Break-In", type: "time" },
+        { key: "jamKeluar", label: "Jam Keluar", type: "time" },
+        { key: "ket",       label: "KET", type: "string" },
+      ];
 
-      // Header Detail
-      detailHead.innerHTML = `
-        <tr class="bg-gradient-to-r from-blue-200 to-blue-400 text-gray-800 font-semibold text-sm shadow-sm">
-          <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="nama">Nama</th>
-          <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="tanggal">Tanggal</th>
-          <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="masuk">Jam Masuk</th>
-          <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="breakout">Jam Break-Out</th>
-          <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="breakin">Jam Break-In</th>
-          <th class="px-4 py-3 border-b border-gray-300 text-center cursor-pointer" data-sort="keluar">Jam Keluar</th>
-          <th class="px-1 py-3 border-b border-gray-300 text-center rounded-tr-lg w-30">KET</th>
-        </tr>
-      `;
+      // 1) Bersihin & generate header SEKALI
+      summaryBody.innerHTML = "";
+      detailBody.innerHTML  = "";
+      generateTableHead(
+        summaryColumns,
+        summaryHead,
+        "text-gray-800 font-semibold text-sm shadow-sm"
+      );
+      generateTableHead(
+        detailColumns,
+        detailHead,
+        "text-gray-800 font-semibold text-sm shadow-sm"
+      );
 
+      // 2) Kumpulin semua baris
+      const allSummaryRows = [];
+      const allDetailRows  = [];
       const users = data.u || [];
       for (const user of users) {
         const nama = user.n;
-        const days = (user.d || []).map(val =>
-          typeof val === "number" ? { s: val, l: [] } : val
-        );
-
+        const days = (user.d || []).map(v => typeof v === "number" ? { s: v, l: [] } : v);
         const logs = normalizeLogs(days);
+        const summary = await calculateSummaryForUser(logs, ideal, nama, data.y, data.m);
 
-        // hitung summary menggunakan fungsi calculateSummaryForUser
-        const summary = await calculateSummaryForUser(logs, ideal, nama);
+        // summary untuk 1 user (format tampilannya)
+        allSummaryRows.push({
+          nama,
+          workHours:     summary.workHours,
+          lemburHours:   summary.lemburHours,
+          uangLembur:    `Rp${summary.uangLembur.toLocaleString()}`,
+          telatHours:    summary.telatHours,
+          earlyOutHours: summary.earlyOutHours,
+          absenceDays:   summary.absenceDays,
+          breakHours:    summary.breakHours,
+        });
 
-        // Detail per hari
-        if (logs.length === 0) logs.push({ tanggal: '-', jamMasuk: '-', jamKeluar: '-', breaks: [], status: 0, holiday: 0 });
-        logs.forEach(log => {
+        // detail untuk 1 user
+        const rows = logs.map(log => {
           let ket = "";
           if (log.status === 1) ket = "Tidak hadir";
           else if (log.status === 2) ket = "Libur";
-          else if (log.isEmpty) ket = "Missing Time";
+          else if (log.isEmpty)     ket = "Missing Time";
           else if (log.holiday === 1) ket = "Tanggal Merah";
 
-          // const jamMasuk = log.jamMasuk;
-          // const jamKeluar = log.jamKeluar;
-          // const breakOut = log.breaks.length >= 1 ? log.breaks[0] : '-';
-          // const breakIn  = log.breaks.length >= 2 ? log.breaks[log.breaks.length - 1] : '-';
-          const jamMasuk = formatJamMenit(log.jamMasuk);
-          const jamKeluar = formatJamMenit(log.jamKeluar);
-          const breakOut = log.breaks.length >= 1 ? formatJamMenit(log.breaks[0]) : '-';
-          const breakIn  = log.breaks.length >= 2 ? formatJamMenit(log.breaks[log.breaks.length - 1]) : '-';
-
-          const tr = document.createElement('tr');
-          tr.className = 'hover:bg-blue-50 transition-colors';
-          tr.innerHTML = `
-            <td class="px-4 py-3 border-b text-sm font-medium text-gray-700">${nama}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-gray-600">${log.tanggal}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-green-700 font-semibold">${jamMasuk || '-'}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakOut}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${breakIn}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-red-700 font-semibold">${jamKeluar || '-'}</td>
-            <td class="px-4 py-3 border-b text-center text-sm text-blue-700">${ket}</td>
-          `;
-          detailBody.appendChild(tr);
+          return {
+            nama,
+            tanggal:   log.tanggal,
+            jamMasuk:  formatJamMenit(log.jamMasuk),
+            breakOut:  log.breaks.length >= 1 ? formatJamMenit(log.breaks[0]) : "-",
+            breakIn:   log.breaks.length >= 2 ? formatJamMenit(log.breaks.at(-1)) : "-",
+            jamKeluar: formatJamMenit(log.jamKeluar),
+            ket
+          };
         });
 
-        // Summary row
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-blue-50 transition-colors';
-        row.innerHTML = `
-          <td class="px-4 py-3 text-sm font-medium text-gray-800">${nama}</td>
-          <td class="px-4 py-3 text-center">${summary.workHours}</td>
-          <td class="px-4 py-3 text-center text-green-700 font-semibold">${summary.lemburHours}</td>
-          <td class="px-4 py-3 text-center font-semibold relative group cursor-pointer ${summary.uangLembur < 0 ? 'text-red-700' : 'text-green-800'}">
-            Rp${summary.uangLembur.toLocaleString()}
-            <div class="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max px-3 py-1 bg-gray-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Rp${summary.uangLemburKotor.toLocaleString()} - Rp${summary.dendaTelat.toLocaleString()}
-            </div>
-          </td>
-          <td class="px-4 py-3 text-center text-red-700">${summary.telatHours}</td>
-          <td class="px-4 py-3 text-center">${summary.earlyOutHours}</td>
-          <td class="px-4 py-3 text-center">${summary.absenceDays}</td>
-          <td class="px-4 py-3 text-center">${summary.breakHours}</td>
-        `;
-        summaryBody.appendChild(row);
+        allDetailRows.push(...rows);
       }
 
-      // Filter
-      function filterTable() {
-        const nameVal = nameInput.value.toLowerCase();
-        detailBody.querySelectorAll('tr').forEach(row => {
-          const nama = row.children[0].textContent.toLowerCase();
-          row.style.display = nama.includes(nameVal) ? '' : 'none';
+      // 3) Render SEKALI
+      generateTableRows(allSummaryRows, summaryBody, summaryColumns);
+      generateTableRows(allDetailRows,  detailBody,  detailColumns);
+
+      // 4) Pasang sorting SETELAH header ready
+      const sortStates = {};
+      detailHead.querySelectorAll('th').forEach((th, i) => {
+        th.addEventListener('click', () => {
+          const type = th.dataset.type || "string";
+          const k = `detail-${i}`;
+          const next = (sortStates[k] === "asc") ? "desc" : "asc";
+          sortStates[k] = next;
+          sortTable(detailBody, i, type, next);
         });
-        summaryBody.querySelectorAll('tr').forEach(row => {
-          const nama = row.children[0].textContent.toLowerCase();
-          row.style.display = nama.includes(nameVal) ? '' : 'none';
+      });
+      summaryHead.querySelectorAll('th').forEach((th, i) => {
+        th.addEventListener('click', () => {
+          const type = th.dataset.type || "string";
+          const k = `summary-${i}`;
+          const next = (sortStates[k] === "asc") ? "desc" : "asc";
+          sortStates[k] = next;
+          sortTable(summaryBody, i, type, next);
         });
-      }
-
-      let sortState = {};
-      function sortTable(colIndex, isDate = false) {
-        const rows = Array.from(detailBody.querySelectorAll('tr'));
-        const currentDir = sortState[colIndex] === 'asc' ? 'desc' : 'asc';
-        sortState[colIndex] = currentDir;
-
-        rows.sort((a,b) => {
-          const valA = a.children[colIndex].textContent.trim();
-          const valB = b.children[colIndex].textContent.trim();
-          let compare;
-          if (isDate) compare = new Date(valA) - new Date(valB);
-          else if (!isNaN(valA) && !isNaN(valB)) compare = Number(valA) - Number(valB);
-          else compare = valA.localeCompare(valB);
-          return currentDir === 'asc' ? compare : -compare;
-        });
-
-        detailBody.innerHTML = '';
-        rows.forEach(r => detailBody.appendChild(r));
-      }
-
-      detailHead.querySelectorAll('th').forEach((th,i) => {
-        const key = th.dataset.sort;
-        if (key) th.addEventListener('click', () => sortTable(i, key === 'tanggal'));
       });
 
+      // 5) Filter name
+      function filterTable() {
+        const nameVal = nameInput.value.toLowerCase();
+        [detailBody, summaryBody].forEach(tbody => {
+          tbody.querySelectorAll('tr').forEach(row => {
+            const nama = row.children[0]?.textContent?.toLowerCase() || "";
+            row.style.display = nama.includes(nameVal) ? '' : 'none';
+          });
+        });
+      }
       nameInput.addEventListener('input', filterTable);
 
     } catch (err) {
@@ -181,10 +158,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function populateMonthYearSelectors() {
+    try {
     const res = await fetch(`${API_URL}/json/list_index.json`);
+    if (!res.ok) throw new Error('Failed to fetch list_index.json');
     const index = await res.json();
 
-    const { year } = await initPeriodSelectors(index);
+    // Get the latest year and month from the index data
+    const years = Object.keys(index).sort().reverse();
+    const latestYear = years[0];
+    const months = index[latestYear].sort().reverse();
+    const latestMonth = months[0];
+
+    // Pass the latest year and month to initPeriodSelectors
+    const { year } = await initPeriodSelectors(index, latestYear, latestMonth);
+
     const yearSelect = document.getElementById("yearSelect");
     const monthSelect = document.getElementById("monthSelect");
 
@@ -195,15 +182,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     monthSelect.addEventListener("change", loadData);
 
     loadData();
+    } catch (err) {
+    console.error('❌ Error initializing period selectors:', err);
+    const msg = document.getElementById('message');
+    if (msg) msg.innerText = 'Gagal memuat daftar tahun/bulan. Periksa file list_index.json.';
+    }
   }
 
   await populateMonthYearSelectors();
 
-  setupTabSwitching({
-    summaryId: "summaryTab",
-    detailId: "detailTab",
-    tabSummaryId: "tabSummary",
-    tabDetailId: "tabDetail"
-  });
-
+  setupTabs(
+    ".tab-btn",      // selector semua tombol tab
+    ".tab-panel",    // selector semua panel/tab content
+    ["bg-blue-600", "text-white"],   // class kalau aktif
+    ["bg-gray-200", "text-gray-700"] // class kalau non-aktif
+  );
 });

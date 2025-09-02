@@ -28,9 +28,11 @@ export function hitungDendaTelat(menitTelat) {
   return aturanDenda.find(([max]) => menitTelat <= max)[1];
 }
 
-export function isSabtu(tanggal) {
-  const d = new Date(tanggal);
-  return d.getDay() === 6;
+export function isSabtu(year, month, tanggal) {
+  // month di JS 0-based
+  const d = new Date(year, month - 1, tanggal);
+  // if(d.getDay() === 6 || d.getDay() === 0) console.log('sabtu');
+  return d.getDay() === 6 || d.getDay() === 0;
 }
 
 export function toYmd(input) {

@@ -1,5 +1,27 @@
 // app.js
 import { API_URL } from './config.js';
+
+function showMessage(text, type = "info") {
+  const msg = document.getElementById("message");
+  msg.textContent = text;
+
+  // reset bg based on type
+  msg.classList.remove("bg-blue-600", "bg-red-600", "bg-green-600");
+  if (type === "error") msg.classList.add("bg-red-600");
+  else if (type === "success") msg.classList.add("bg-green-600");
+  else msg.classList.add("bg-blue-600");
+
+  // Fade in
+  msg.classList.remove("opacity-0");
+  msg.classList.add("opacity-100");
+
+  // Fade out after 3s
+  setTimeout(() => {
+    msg.classList.remove("opacity-100");
+    msg.classList.add("opacity-0");
+  }, 3000);
+}
+
 document.getElementById('upload-form').addEventListener('submit', async function (e) {
   e.preventDefault();
 
@@ -7,45 +29,39 @@ document.getElementById('upload-form').addEventListener('submit', async function
   const formData = new FormData();
   formData.append('csvFile', fileInput.files[0]);
 
-  const messageEl = document.getElementById('message');
-  messageEl.innerText = "⏳ Uploading...";
+  showMessage("⏳ Uploading...", "info");
 
   try {
-    // Panggil endpoint upload.php
     const uploadRes = await fetch(`${API_URL}/upload.php`, {
       method: 'POST',
       body: formData,
     });
 
-    // Ambil respons sebagai teks mentah
     const rawText = await uploadRes.text();
 
-    // Parse ke JSON
     let uploadResult;
     try {
       uploadResult = JSON.parse(rawText);
     } catch (err) {
       console.error("Error parsing JSON dari upload.php:", err.message, rawText);
-      messageEl.innerText = "❌ Upload gagal: Respons server bukan JSON valid. Periksa console log.";
+      showMessage("❌ Upload gagal: respons server bukan JSON valid.", "error");
       return;
     }
 
-    // Cek status sukses
     if (!uploadResult.success) {
-      messageEl.innerText = '❌ Upload gagal: ' + uploadResult.message;
+      showMessage('❌ Upload gagal: ' + uploadResult.message, "error");
       return;
     }
 
     // ✅ Upload dan parsing berhasil
-    messageEl.innerText = '✅ Sukses! Data berhasil diparse';
+    showMessage('✅ Sukses! Data berhasil diparse', "success");
     console.log("Parsed data:", uploadResult.parse_log);
 
-    // Langsung akses hasil parsing (sudah berupa object)
     if (uploadResult.parse_log && uploadResult.parse_log.data) {
       console.log("User Logs:", uploadResult.parse_log.data);
     }
 
   } catch (error) {
-    messageEl.innerText = '❌ Terjadi kesalahan: ' + error.message;
+    showMessage('❌ Terjadi kesalahan: ' + error.message, "error");
   }
 });

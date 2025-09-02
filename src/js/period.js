@@ -17,35 +17,38 @@ export async function initPeriodSelectors(index) {
   const yearSelect = document.getElementById("yearSelect");
   const monthSelect = document.getElementById("monthSelect");
 
-  // isi dropdown tahun
-  Object.keys(index).sort().forEach((year) => {
+  // Get all available years and sort them in descending order
+  const years = Object.keys(index).sort().reverse();
+
+  // Populate the year dropdown
+  years.forEach((year) => {
     const opt = document.createElement("option");
     opt.value = year;
     opt.textContent = year;
     yearSelect.appendChild(opt);
   });
 
-  // default: tahun & bulan sekarang
-  const now = new Date();
-  const defaultYear = now.getFullYear().toString();
-  const defaultMonth = String(now.getMonth() + 1).padStart(2, "0");
+  // Determine the latest available year and month from the index
+  const latestYear = years[0];
+  const latestMonths = index[latestYear] ? index[latestYear].sort().reverse() : [];
+  const latestMonth = latestMonths[0];
 
-  yearSelect.value = defaultYear;
+  // Set the year dropdown to the latest available year
+  yearSelect.value = latestYear;
 
-  // isi dropdown bulan
-  const months = index[defaultYear];
-  if (months) {
-    monthSelect.innerHTML = "";
-    months.forEach((month) => {
-      const opt = document.createElement("option");
-      opt.value = month;
-      opt.textContent = month;
-      monthSelect.appendChild(opt);
-    });
-    monthSelect.value = defaultMonth;
-  }
+  // Populate the month dropdown with months for the latest year
+  monthSelect.innerHTML = "";
+  latestMonths.forEach((month) => {
+    const opt = document.createElement("option");
+    opt.value = month;
+    opt.textContent = month;
+    monthSelect.appendChild(opt);
+  });
 
-  return { year: defaultYear, month: defaultMonth };
+  // Set the month dropdown to the latest available month
+  monthSelect.value = latestMonth;
+
+  return { year: latestYear, month: latestMonth };
 }
 
 /**

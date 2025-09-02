@@ -1,34 +1,42 @@
 // tabs.js
-export function setupTabSwitching({ summaryId, detailId, tabSummaryId, tabDetailId }) {
-  const tabSummary = document.getElementById(tabSummaryId);
-  const tabDetail = document.getElementById(tabDetailId);
-  const summaryTab = document.getElementById(summaryId);
-  const detailTab = document.getElementById(detailId);
+export function setupTabs(tabSelector, panelSelector, activeClasses = [], inactiveClasses = []) {
+  const tabs = document.querySelectorAll(tabSelector);
+  const panels = document.querySelectorAll(panelSelector);
 
-  tabSummary.addEventListener("click", () => {
-    summaryTab.classList.remove("hidden");
-    detailTab.classList.add("hidden");
-    tabSummary.classList.replace("bg-gray-200", "bg-blue-600");
-    tabSummary.classList.replace("text-gray-700", "text-white");
-    tabDetail.classList.replace("bg-blue-600", "bg-gray-200");
-    tabDetail.classList.replace("text-white", "text-gray-700");
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const targetId = tab.getAttribute("data-target");
+      const targetPanel = document.getElementById(targetId);
+
+      // sembunyikan semua panel
+      panels.forEach(panel => panel.classList.add("hidden"));
+
+      // nonaktifkan semua tab
+      tabs.forEach(t => {
+        inactiveClasses.forEach(c => t.classList.add(c));
+        activeClasses.forEach(c => t.classList.remove(c));
+      });
+
+      // tampilkan panel target
+      targetPanel.classList.remove("hidden");
+
+      // aktifkan tab yang dipilih
+      activeClasses.forEach(c => tab.classList.add(c));
+      inactiveClasses.forEach(c => tab.classList.remove(c));
+    });
   });
 
-  tabDetail.addEventListener("click", () => {
-    summaryTab.classList.add("hidden");
-    detailTab.classList.remove("hidden");
-    tabDetail.classList.replace("bg-gray-200", "bg-blue-600");
-    tabDetail.classList.replace("text-gray-700", "text-white");
-    tabSummary.classList.replace("bg-blue-600", "bg-gray-200");
-    tabSummary.classList.replace("text-white", "text-gray-700");
-  });
+  // 👉 Set default: aktifkan tab pertama & panel pertama
+  if (tabs.length > 0 && panels.length > 0) {
+    const firstTab = tabs[0];
+    const firstTargetId = firstTab.getAttribute("data-target");
+    const firstPanel = document.getElementById(firstTargetId);
 
-  tabDetail.addEventListener("click", () => {
-    summaryTab.classList.add("hidden");
-    detailTab.classList.remove("hidden");
-    tabDetail.classList.replace("bg-gray-200", "bg-blue-600");
-    tabDetail.classList.replace("text-gray-700", "text-white");
-    tabSummary.classList.replace("bg-blue-600", "bg-gray-200");
-    tabSummary.classList.replace("text-white", "text-gray-700");
-  });
+    // tampilkan panel pertama
+    firstPanel.classList.remove("hidden");
+
+    // aktifkan tab pertama
+    activeClasses.forEach(c => firstTab.classList.add(c));
+    inactiveClasses.forEach(c => firstTab.classList.remove(c));
+  }
 }
