@@ -66,7 +66,7 @@ export function normalizeLogs(days) {
 /**
  * Hitung summary tanpa fetch lagi
  */
-export async function calculateSummaryForUser(logs, ideal, nama = "", year, month) {
+export async function calculateSummaryForUser(logs, year, month) {
   if (!logs || logs.length === 0) return {
     workMinutes:0, workHours:"00:00", lemburHours:"00:00",
     uangLemburKotor:0, jamKerjaIdeal:"00:00", dendaTelat:0,
@@ -78,10 +78,24 @@ export async function calculateSummaryForUser(logs, ideal, nama = "", year, mont
   let totalTelat=0, totalEarly=0, missing=0, libur=0;
   const hariKerjaTercatat = new Set();
 
-  const dendaPerHari = []; // 🔑 array buat log
+  const dendaPerHari = [];
   const lemburPerHari = [];
 
+  // Mendapatkan tanggal, bulan, dan tahun saat ini
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+  const currentDay = today.getDate();
+
+  // Menentukan batas tanggal untuk perhitungan
+  const batasTanggal = (year === currentYear && month === currentMonth) ? currentDay : 31;
+
   logs.forEach(log => {
+    // Abaikan hari-hari di luar batas tanggal jika bulan ini
+    if (log.tanggal > batasTanggal) {
+      return;
+    }
+
     if (log.holiday && !log.jamMasuk && !log.jamKeluar) {
       libur++; 
       return; 
@@ -127,29 +141,11 @@ export async function calculateSummaryForUser(logs, ideal, nama = "", year, mont
     // Break
     const totalBreakHariIni = log.breaks.reduce((a,b)=>a+b,0);
     totalBreak += totalBreakHariIni;
-
-    // console.log(`
-    //   ${nama}
-    //   tanggal      : ${log.tanggal},
-    //   Jam Keluar   : ${jamKeluar},
-    //   Jam Kerja End:${jamKerjaEnd},
-    //   Lembur       : ${formatJamMenit(Math.max(jamKeluar - jamKerjaEnd, 0))}
-    // `);
   });
 
-  const absence = logs.filter(l => !l.holiday && l.isEmpty).length;
+  const absence = logs.filter(l => !l.holiday && l.isEmpty && l.tanggal <= batasTanggal).length;
   const uangLemburKotor = Math.floor(totalLembur/60)*TARIF_LEMBUR_PER_JAM;
   const uangLembur = Math.max(uangLemburKotor-totalDenda,0);
-
-  const x=totalWork-ideal.minutes;
-  if (ideal) {
-    const rumus = lemburPerHari.map(l => l.lembur).join(" + ");
-    const total = lemburPerHari.reduce((a, b) => a + b.lembur, 0);
-    // console.log(`[ ${nama} ]
-    //   Total Kerja  : ${formatJamMenit(totalWork)} (${totalWork} menit),
-    //   Selisih      : ${formatJamMenit(x)} (${x} menit)
-    //   Lembur Harian: ${rumus} = ${total} menit (${formatJamMenit(total)})`);
-  }
 
   return {
     workMinutes: totalWork,

@@ -1,7 +1,14 @@
+
 // main.js
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faXmark, faFileArrowUp } from '@fortawesome/free-solid-svg-icons';
+
+// Add the imported icons to the library
+library.add(faXmark, faFileArrowUp);
+
 import './css/input.css';
 import './css/style.css';
-import './js/app.js'; 
+import './js/app.js';
 import { API_URL } from './js/config.js';
 import { setupTabs } from './js/tabs.js';
 import { formatJamMenit } from './js/utils.js';
@@ -11,6 +18,13 @@ import { initPeriodSelectors, updateMonthsForYear } from "./js/period.js";
 import { sortTable, generateTableRows, generateTableHead } from './js/table.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 🔥 Force fetch to always bypass cache
+  const origFetch = window.fetch;
+  window.fetch = (url, options = {}) => {
+    const sep = url.includes("?") ? "&" : "?";
+    const newUrl = `${url}${sep}_=${Date.now()}`;
+    return origFetch(newUrl, { ...options, cache: "no-store" });
+  };
 
   function getSelectedFilePath() {
     const year = document.getElementById('yearSelect')?.value;
@@ -58,16 +72,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       // 1) Bersihin & generate header SEKALI
       summaryBody.innerHTML = "";
       detailBody.innerHTML  = "";
-      generateTableHead(
-        summaryColumns,
-        summaryHead,
-        "text-gray-800 font-semibold text-sm shadow-sm"
-      );
-      generateTableHead(
-        detailColumns,
-        detailHead,
-        "text-gray-800 font-semibold text-sm shadow-sm"
-      );
+      generateTableHead(summaryColumns, summaryHead, "text-gray-800 font-semibold text-sm shadow-sm");
+      generateTableHead(detailColumns, detailHead, "text-gray-800 font-semibold text-sm shadow-sm");
 
       // 2) Kumpulin semua baris
       const allSummaryRows = [];
@@ -77,9 +83,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const nama = user.n;
         const days = (user.d || []).map(v => typeof v === "number" ? { s: v, l: [] } : v);
         const logs = normalizeLogs(days);
-        const summary = await calculateSummaryForUser(logs, ideal, nama, data.y, data.m);
+        const summary = await calculateSummaryForUser(logs, data.y, data.m);
 
-        // summary untuk 1 user (format tampilannya)
         allSummaryRows.push({
           nama,
           workHours:     summary.workHours,
@@ -91,12 +96,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           breakHours:    summary.breakHours,
         });
 
-        // detail untuk 1 user
         const rows = logs.map(log => {
           let ket = "";
           if (log.status === 1) ket = "Tidak hadir";
           else if (log.status === 2) ket = "Libur";
-          else if (log.isEmpty)     ket = "Missing Time";
+          else if (log.isEmpty) ket = "Missing Time";
           else if (log.holiday === 1) ket = "Tanggal Merah";
 
           return {
@@ -117,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       generateTableRows(allSummaryRows, summaryBody, summaryColumns);
       generateTableRows(allDetailRows,  detailBody,  detailColumns);
 
-      // 4) Pasang sorting SETELAH header ready
+      // 4) Pasang sorting
       const sortStates = {};
       detailHead.querySelectorAll('th').forEach((th, i) => {
         th.addEventListener('click', () => {
@@ -159,42 +163,54 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function populateMonthYearSelectors() {
     try {
-    const res = await fetch(`${API_URL}/json/list_index.json`);
-    if (!res.ok) throw new Error('Failed to fetch list_index.json');
-    const index = await res.json();
+      const res = await fetch(`${API_URL}/json/list_index.json`);
+      if (!res.ok) throw new Error('Failed to fetch list_index.json');
+      const index = await res.json();
 
-    // Get the latest year and month from the index data
-    const years = Object.keys(index).sort().reverse();
-    const latestYear = years[0];
-    const months = index[latestYear].sort().reverse();
-    const latestMonth = months[0];
+      const years = Object.keys(index).sort().reverse();
+      const latestYear = years[0];
+      const months = index[latestYear].sort().reverse();
+      const latestMonth = months[0];
 
-    // Pass the latest year and month to initPeriodSelectors
-    const { year } = await initPeriodSelectors(index, latestYear, latestMonth);
+      await initPeriodSelectors(index, latestYear, latestMonth);
 
-    const yearSelect = document.getElementById("yearSelect");
-    const monthSelect = document.getElementById("monthSelect");
+      const yearSelect = document.getElementById("yearSelect");
+      const monthSelect = document.getElementById("monthSelect");
 
-    yearSelect.addEventListener("change", async () => {
-      await updateMonthsForYear(index, yearSelect.value);
+      yearSelect.addEventListener("change", async () => {
+        await updateMonthsForYear(index, yearSelect.value);
+        loadData();
+      });
+      monthSelect.addEventListener("change", loadData);
+
       loadData();
-    });
-    monthSelect.addEventListener("change", loadData);
-
-    loadData();
     } catch (err) {
-    console.error('❌ Error initializing period selectors:', err);
-    const msg = document.getElementById('message');
-    if (msg) msg.innerText = 'Gagal memuat daftar tahun/bulan. Periksa file list_index.json.';
+      console.error('❌ Error initializing period selectors:', err);
+      const msg = document.getElementById('message');
+      if (msg) msg.innerText = 'Gagal memuat daftar tahun/bulan. Periksa file list_index.json.';
     }
+  }
+
+  const toggleUploadBtn = document.getElementById('toggle-upload-btn');
+  const uploadForm = document.getElementById('upload-form');
+
+  if (toggleUploadBtn && uploadForm) {
+    toggleUploadBtn.addEventListener('click', () => {
+      uploadForm.classList.toggle('hidden');
+      if (uploadForm.classList.contains('hidden')) {
+        toggleUploadBtn.innerHTML = '<i class="fa-solid fa-file-arrow-up"></i> Upload Data';
+      } else {
+        toggleUploadBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      }
+    });
   }
 
   await populateMonthYearSelectors();
 
   setupTabs(
-    ".tab-btn",      // selector semua tombol tab
-    ".tab-panel",    // selector semua panel/tab content
-    ["bg-blue-600", "text-white"],   // class kalau aktif
-    ["bg-gray-200", "text-gray-700"] // class kalau non-aktif
+    ".tab-btn",
+    ".tab-panel",
+    ["bg-blue-600", "text-white"],
+    ["bg-gray-200", "text-gray-700"]
   );
 });

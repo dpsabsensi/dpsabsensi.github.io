@@ -29,5 +29,12 @@
   "bugs": {
     "url": "https://github.com/dpsabsensi/dpsabsensi.github.io/issues"
   },
-  "homepage": "https://github.com/dpsabsensi/dpsabsensi.github.io#readme"
+  "homepage": "https://github.com/dpsabsensi/dpsabsensi.github.io#readme",
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.0.1",
+    "@fortawesome/free-brands-svg-icons": "^7.0.1",
+    "@fortawesome/free-regular-svg-icons": "^7.0.1",
+    "@fortawesome/free-solid-svg-icons": "^7.0.1",
+    "font-awesome": "^4.7.0"
+  }
 }
